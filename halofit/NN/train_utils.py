@@ -410,6 +410,10 @@ def generate_model(num_pcs, num_of_layers, input_data, num_of_neurons=512, activ
     model = keras.Sequential(nn_layers)
     y = model(np.array([input_data[0]])) # Calling model on an example input to initialize the input layer
     model.summary()
+    model.compile(
+        optimizer = keras.optimizers.Adam(),
+        loss = keras.losses.MeanAbsoluteError()
+    )
     return model
 #------------------------------------------------------------------------------------------------------------
 def generate_model_regularized(num_pcs, num_of_layers, input_data, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
@@ -432,6 +436,10 @@ def generate_model_regularized(num_pcs, num_of_layers, input_data, num_of_neuron
     nn_layers.append(out_layer)
     model = keras.Sequential(nn_layers)
     model.summary()
+    model.compile(
+        optimizer = keras.optimizers.Adam(),
+        loss = keras.losses.MeanAbsoluteError()
+    )
     return model
 #------------------------------------------------------------------------------------------------------------
 def generate_resnet(num_pcs, num_res_blocks, input_data, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
@@ -476,6 +484,11 @@ def generate_resnet(num_pcs, num_res_blocks, input_data, num_of_neurons=512, act
     model = keras.models.Model(inputs=input_layer, outputs=output_layer)
     
     model.summary()
+    
+    model.compile(
+        optimizer = keras.optimizers.Adam(),
+        loss = keras.losses.MeanAbsoluteError()
+    )
     
     return model
 #------------------------------------------------------------------------------------------------------------
@@ -671,3 +684,42 @@ def _smeared_bao_pk(k_lin=None, pk_lin=None, k_emu=None, pk_lin_emu=None, pk_nw=
         if pk_nw is None:
             pk_nw = np.array([_nowiggles_pk(k_lin=k_lin, pk_lin=pkl, k_emu=k_emu) for pkl in pk_lin])
     return pk_lin_emu * G + pk_nw * (1 - G)
+
+def nn_model_train(model, epochs, input_data, truths, validation_features=None, validation_truths=None, decayevery=None, decayrate=None):
+    '''
+    Creates and trains a neural network model that emulates the pc_components from the input_data
+    Returns
+    '''
+    if decayevery and decayrate: 
+        def scheduler(epoch, learning_rate):
+            # Halves the learning rate at some points during training
+            if epoch != 0 and epoch % decayevery == 0:
+                return learning_rate/decayrate
+            else:
+                return learning_rate
+    
+    if decayevery:
+        learning_scheduler = keras.callbacks.LearningRateScheduler(scheduler)
+    else:
+        learning_scheduler = keras.callbacks.LearningRateScheduler(lambda epoch, learning_rate: learning_rate)
+    
+    if validation_features and validation_truths:
+        history = model.fit(
+            input_data,
+            truths,
+            batch_size = 30,
+            epochs = epochs,
+            validation_data = (validation_features, validation_truths),
+            callbacks=[learning_scheduler],
+        )
+    else:
+        history = model.fit(
+            input_data,
+            truths,
+            batch_size = 30,
+            epochs = epochs,
+            callbacks=[learning_scheduler],
+        )
+    
+    last_loss = history.history['loss'][-1]
+    return last_loss
