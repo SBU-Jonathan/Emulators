@@ -45,8 +45,11 @@ ref['w'] = -1
 # Define k, z bins
 redshifts = np.array([9.182, 7.690, 6.579, 5.720, 5.036, 4.478, 4.015, 3.624, 3.289, 3.000, 2.750, 2.529, 2.333, 2.158, 2.000, 1.824, 1.667, 1.526, 1.400, 1.286, 1.182, 1.087, 1.000, 0.929, 0.862, 0.800, 0.742, 0.688, 0.636, 0.588, 0.543, 0.500, 0.457, 0.417, 0.378, 0.342, 0.308, 0.275, 0.244, 0.214, 0.186, 0.159, 0.133, 0.109, 0.085, 0.062, 0.041, 0.020, 0.000])
 redshifts = np.flip(redshifts)
-ks_400 = np.genfromtxt('./power_spectra/lcdm/400/pk_ref_z_0.000.txt', unpack=True, usecols=(0))
-ks_800 = np.genfromtxt('./power_spectra/lcdm/800/pk_ref_z_0.000.txt', unpack=True, usecols=(0))
+ks_400 = np.genfromtxt("/home/grads/data/jonathan/halofit_data/lcdm/0_percent/400/pk_ref_z_0.000.txt", unpack=True, usecols=(0))
+ks_800 = np.genfromtxt("/home/grads/data/jonathan/halofit_data/lcdm/0_percent/800/pk_ref_z_0.000.txt", unpack=True, usecols=(0))
+#ks_500 = np.genfromtxt("/home/grads/data/jonathan/halofit_data/wcdm/0_percent/500/pk_ref_z_0.000.txt", unpack=True, usecols=(0))
+#ks_1000 = np.genfromtxt("/home/grads/data/jonathan/halofit_data/wcdm/0_percent/1000/pk_ref_z_0.000.txt", unpack=True, usecols=(0))
+assert np.all(ks_800 == ks_400), "Checking whether the ks are equal."
 #------------------------------------------------------------------------------------------------------------
 def get_pk(h, Omegab, Omegam, As10to9, ns, w, redshifts = np.linspace(3, 0, 101), tau = 0.078):
     '''
@@ -285,154 +288,26 @@ def smear_bao(ks, pk, pk_nw):
     pk_smeared = pk*Gk + pk_nw*(1.0 - Gk)
     return pk_smeared
 #------------------------------------------------------------------------------------------------------------
-def generate_and_save_train_spectra(sample):
-    '''
-    Generates linear and nonlinear power spectra for the LHS points in `sample`
-    Input: LHS sample in the format (h, Omegab, Omegam, As10to9, ns, wde)
-    Output: pks_lin and pk_nonlin, arrays of power spectra pk(k, z) for each sample point for the specified k-bins and redshifts
-    '''
-    pks_lin = np.zeros((len(sample), len(redshifts), len(ks)))
-    pks_nonlin = np.zeros((len(sample), len(redshifts), len(ks)))
-    for i, point in enumerate(sample):
-        h_point, Omegab_point, Omegam_point, As10to9_point, ns_point, wde_point = point
-        _, pk_lin_point, pk_nonlin_point = get_pk(h_point, Omegab_point, Omegam_point, As10to9_point, ns_point, wde_point)
-        pks_lin[i] = pk_lin_point
-        pks_nonlin[i] = pk_nonlin_point
-        if i < 10:
-            np.savetxt('train_pks/lin_00'+str(i)+'.txt', pks_lin[i])
-            np.savetxt('train_pks/nonlin_00'+str(i)+'.txt', pks_nonlin[i])
-        elif i < 100:
-            np.savetxt('train_pks/lin_0'+str(i)+'.txt', pks_lin[i])
-            np.savetxt('train_pks/nonlin_0'+str(i)+'.txt', pks_nonlin[i])
-        else:
-            np.savetxt('train_pks/lin_'+str(i)+'.txt', pks_lin[i])
-            np.savetxt('train_pks/nonlin_'+str(i)+'.txt', pks_nonlin[i])
-        fraction = (i+1)/len(sample)
-        # Reporting progress
-        if fraction in np.arange(0.1, 1.1, 0.1):
-            percentage = fraction*100
-            num_of_dashes = round(fraction*10)
-            progress_bar = '[' + '-'*num_of_dashes + ' '*(10-num_of_dashes) + ']'
-            print('Progress: ', percentage, '% ', progress_bar)
-    return pks_lin, pks_nonlin
-#------------------------------------------------------------------------------------------------------------
-def generate_and_save_test_spectra(sample):
-    '''
-    Generates test linear and nonlinear power spectra for k and z bins determined in redshifts and ks
-    '''
-    test_pks_lin = np.zeros((len(sample), len(redshifts), len(ks)))
-    test_pks_nonlin = np.zeros((len(sample), len(redshifts), len(ks)))
-    for i, point in enumerate(sample):
-        h_point, Omegab_point, Omegam_point, As10to9_point, ns_point, wde_point = point
-        _, pk_lin_point, pk_nonlin_point = get_pk(h_point, Omegab_point, Omegam_point, As10to9_point, ns_point, wde_point)
-        test_pks_lin[i] = pk_lin_point
-        test_pks_nonlin[i] = pk_nonlin_point
-        if i < 10:
-            np.savetxt('test_pks/lin_00'+str(i)+'.txt', test_pks_lin[i])
-            np.savetxt('test_pks/nonlin_00'+str(i)+'.txt', test_pks_nonlin[i])
-        elif i < 100:
-            np.savetxt('test_pks/lin_0'+str(i)+'.txt', test_pks_lin[i])
-            np.savetxt('test_pks/nonlin_0'+str(i)+'.txt', test_pks_nonlin[i])
-        else:
-            np.savetxt('test_pks/lin_'+str(i)+'.txt', test_pks_lin[i])
-            np.savetxt('test_pks/nonlin_'+str(i)+'.txt', test_pks_nonlin[i])
-        fraction = (i+1)/len(sample)
-        # Reporting progress
-        if fraction in np.arange(0.1, 1.1, 0.1):
-            percentage = fraction*100
-            num_of_dashes = round(fraction*10)
-            progress_bar = '[' + '-'*num_of_dashes + ' '*(10-num_of_dashes) + ']'
-            print('Progress: ', percentage, '% ', progress_bar)
-    return test_pks_lin, test_pks_nonlin
-#------------------------------------------------------------------------------------------------------------
-def load_spectra_from_files(sample, dataset):
-    assert (dataset=='train' or dataset=='test'), 'Dataset must be one of \'train\' or \'test\''
-    folder=dataset+'_pks'
-    pks_lin = np.zeros((len(sample), len(redshifts), len(ks)))
-    pks_nonlin = np.zeros((len(sample), len(redshifts), len(ks)))
-    for i, point in enumerate(sample):
-        if i < 10:
-            pks_lin[i] = np.loadtxt(folder+'/lin_00'+str(i)+'.txt')
-            pks_nonlin[i] = np.loadtxt(folder+'/nonlin_00'+str(i)+'.txt')
-        elif i < 100:
-            pks_lin[i] = np.loadtxt(folder+'/lin_0'+str(i)+'.txt')
-            pks_nonlin[i] = np.loadtxt(folder+'/nonlin_0'+str(i)+'.txt')
-        else:
-            pks_lin[i] = np.loadtxt(folder+'/lin_'+str(i)+'.txt')
-            pks_nonlin[i] = np.loadtxt(folder+'/nonlin_'+str(i)+'.txt')
-    return pks_lin, pks_nonlin
-#------------------------------------------------------------------------------------------------------------
-def generate_and_save_smear_bao(pks_lin, dataset):
-    '''
-    Takes an array of linear power spectra and returns the smeared version
-    '''
-    assert (dataset=='train' or dataset=='test'), 'Dataset must be one of \'train\' or \'test\''
-    pks_lin_smear = np.zeros((len(pks_lin), len(redshifts), len(ks)))
-    folder=dataset+'_pks'
-    for i, pk_lin in enumerate(pks_lin):
-        for j, z in enumerate(redshifts):
-            pks_lin_smear[i, j] = smear_bao(ks, pk_lin[j])
-        if i < 10:
-            np.savetxt(folder+'/smear_00'+str(i)+'.txt', pks_lin_smear[i])
-        elif i < 100:
-            np.savetxt(folder+'/smear_0'+str(i)+'.txt', pks_lin_smear[i])
-        else:
-            np.savetxt(folder+'/smear_'+str(i)+'.txt', pks_lin_smear[i])
-    return pks_lin_smear
-#------------------------------------------------------------------------------------------------------------
-def load_smear_bao(sample, dataset):
-    assert (dataset=='train' or dataset=='test'), 'Dataset must be one of \'train\' or \'test\''
-    folder=dataset+'_pks'
-    pks_smear = np.zeros((len(sample), len(redshifts), len(ks)))
-    for i, point in enumerate(sample):
-        if i < 10:
-            pks_smear[i] = np.loadtxt(folder+'/smear_00'+str(i)+'.txt')
-        elif i < 100:
-            pks_smear[i] = np.loadtxt(folder+'/smear_0'+str(i)+'.txt')
-        else:
-            pks_smear[i] = np.loadtxt(folder+'/smear_'+str(i)+'.txt')
-    return pks_smear
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-def generate_model(num_pcs, num_of_layers, input_data, num_of_neurons=512, activation="relu"):
-    '''
-    Returns a keras sequential NN model with `num_of_layers` hidden layers with `num_of_neurons` each.
-    '''
-    nn_layers = []
-    # Adding layers
-    input_layer = Input(shape=len(input_data[0]))
-    nn_layers.append(input_layer)
-    for i in range(num_of_layers):
-        nn_layers.append(layers.Dense(num_of_neurons, activation=activation, name='hid_layer'+str(i+1)))
-        nn_layers.append(layers.BatchNormalization())
-    # Output layer has `num_pcs` neurons
-    nn_layers.append(layers.Dense(num_pcs, activation=activation, name='out_layer'))
-    model = keras.Sequential(nn_layers)
-    y = model(np.array([input_data[0]])) # Calling model on an example input to initialize the input layer
-    model.summary()
-    model.compile(
-        optimizer = keras.optimizers.Adam(),
-        loss = keras.losses.MeanAbsoluteError()
-    )
-    return model
 #------------------------------------------------------------------------------------------------------------
-def generate_model_regularized(num_pcs, num_of_layers, input_data, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
+def generate_mlp(input_shape, output_shape, num_layers=2, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
     '''
-    Returns a keras sequential NN model with `num_of_layers` hidden layers with `num_of_neurons` each.
+    Returns a keras sequential NN model with `num_layers` hidden layers with `num_of_neurons` each.
     '''
     nn_layers = []
     regularization_term = l1_l2(l1=alpha*l1_ratio, l2=alpha*(1-l1_ratio))
     # Adding layers
-    input_layer = layers.Input(shape=len(input_data[0]))
+    input_layer = layers.Input(shape=input_shape)
     nn_layers.append(input_layer)
-    for i in range(num_of_layers):
+    for i in range(num_layers):
         nn_layers.append(layers.Dense(num_of_neurons, activation=activation, name=f'hid_layer_{i+1}', 
             kernel_regularizer=regularization_term, bias_regularizer=regularization_term))
         if dropout != 0:
             nn_layers.append(layers.Dropout(dropout, name=f'dropout_{i+1}'))
         #nn_layers.append(layers.BatchNormalization())
-    # Output layer has `num_pcs` neurons
-    out_layer = layers.Dense(num_pcs, activation=activation, name='out_layer')
+    # Output layer has `output_shape` neurons
+    out_layer = layers.Dense(output_shape, activation=activation, name='out_layer')
     nn_layers.append(out_layer)
     model = keras.Sequential(nn_layers)
     model.summary()
@@ -442,7 +317,7 @@ def generate_model_regularized(num_pcs, num_of_layers, input_data, num_of_neuron
     )
     return model
 #------------------------------------------------------------------------------------------------------------
-def generate_resnet(num_pcs, num_res_blocks, input_data, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
+def generate_resnet(input_shape, output_shape, num_res_blocks=1, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
     '''
     Generates a ResNet model with `num_res_blocks` residual blocks.
     '''
@@ -450,7 +325,7 @@ def generate_resnet(num_pcs, num_res_blocks, input_data, num_of_neurons=512, act
     regularization_term = l1_l2(l1=alpha*l1_ratio, l2=alpha*(1-l1_ratio))
     
     # Adding layers
-    input_layer = layers.Input(shape=len(input_data[0]))
+    input_layer = layers.Input(shape=input_shape)
     
     # Adding first residual block
     hid1 = layers.Dense(units=num_of_neurons,
@@ -479,7 +354,7 @@ def generate_resnet(num_pcs, num_res_blocks, input_data, num_of_neurons=512, act
 
             residual = layers.Add()([hid1, hid2])
     
-    output_layer = layers.Dense(units=num_pcs, activation='relu')(residual)
+    output_layer = layers.Dense(units=output_shape, activation='relu')(residual)
     
     model = keras.models.Model(inputs=input_layer, outputs=output_layer)
     
@@ -491,6 +366,43 @@ def generate_resnet(num_pcs, num_res_blocks, input_data, num_of_neurons=512, act
     )
     
     return model
+#------------------------------------------------------------------------------------------------------------
+def nn_model_train(model, epochs, input_data, truths, validation_features=None, validation_truths=None, decayevery=None, decayrate=None):
+    '''
+    Trains a neural network model that emulates the truths from the input_data
+    Can program the number of epochs and a step-based learning rate decay
+    '''
+    if decayevery and decayrate: 
+        def scheduler(epoch, learning_rate):
+            # Halves the learning rate at some points during training
+            if epoch != 0 and epoch % decayevery == 0:
+                return learning_rate/decayrate
+            else:
+                return learning_rate
+        learning_scheduler = keras.callbacks.LearningRateScheduler(scheduler)
+    else:
+        learning_scheduler = keras.callbacks.LearningRateScheduler(lambda epoch, learning_rate: learning_rate)
+    
+    if validation_features and validation_truths:
+        history = model.fit(
+            input_data,
+            truths,
+            batch_size = 30,
+            epochs = epochs,
+            validation_data = (validation_features, validation_truths),
+            callbacks=[learning_scheduler],
+        )
+    else:
+        history = model.fit(
+            input_data,
+            truths,
+            batch_size = 30,
+            epochs = epochs,
+            callbacks=[learning_scheduler],
+        )
+    
+    last_loss = history.history['loss'][-1]
+    return last_loss
 #------------------------------------------------------------------------------------------------------------
 def test_model(emulator, test_sample, test_data, pc_components, pca_z, log_quantity, save=False):
     '''
@@ -685,41 +597,3 @@ def _smeared_bao_pk(k_lin=None, pk_lin=None, k_emu=None, pk_lin_emu=None, pk_nw=
             pk_nw = np.array([_nowiggles_pk(k_lin=k_lin, pk_lin=pkl, k_emu=k_emu) for pkl in pk_lin])
     return pk_lin_emu * G + pk_nw * (1 - G)
 
-def nn_model_train(model, epochs, input_data, truths, validation_features=None, validation_truths=None, decayevery=None, decayrate=None):
-    '''
-    Creates and trains a neural network model that emulates the pc_components from the input_data
-    Returns
-    '''
-    if decayevery and decayrate: 
-        def scheduler(epoch, learning_rate):
-            # Halves the learning rate at some points during training
-            if epoch != 0 and epoch % decayevery == 0:
-                return learning_rate/decayrate
-            else:
-                return learning_rate
-    
-    if decayevery:
-        learning_scheduler = keras.callbacks.LearningRateScheduler(scheduler)
-    else:
-        learning_scheduler = keras.callbacks.LearningRateScheduler(lambda epoch, learning_rate: learning_rate)
-    
-    if validation_features and validation_truths:
-        history = model.fit(
-            input_data,
-            truths,
-            batch_size = 30,
-            epochs = epochs,
-            validation_data = (validation_features, validation_truths),
-            callbacks=[learning_scheduler],
-        )
-    else:
-        history = model.fit(
-            input_data,
-            truths,
-            batch_size = 30,
-            epochs = epochs,
-            callbacks=[learning_scheduler],
-        )
-    
-    last_loss = history.history['loss'][-1]
-    return last_loss
