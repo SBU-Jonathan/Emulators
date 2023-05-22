@@ -1,3 +1,16 @@
+## Table of Contents
+1. [Polynomial Chaos Expansion](#polynomial-chaos-expansion)
+ 
+2. [Installation](#installation)   
+   1. [Packages](#usage-subsection-1)
+4. [Usage](#usage)
+5. [License](#license)
+
+
+ 
+
+
+
 # Polynomial Chaos Expansion
 
 Emulation, in its essence, is about generating data that's both fast and precise for a wide range of potential inputs all at once. One tool that's really handy for this is something called Polynomial Chaos Expansion (PCE), which people have been studying and using in a bunch of different areas, including cosmology, it's a go-to method for quantifying uncertainty and creating surrogate models, along with Gaussian Process (GP) and Neural Network (NN) regression.
@@ -9,6 +22,16 @@ The basis for the expansion in PCE depends on the probability distribution of th
 As for determining each coefficient of the polynomial, one popular technique we turn to is called the Elastic Net. The Elastic Net is a clever method that combines two techniques - ridge regression and lasso regression. Ridge regression prevents overfitting by adding a penalty equivalent to square of the magnitude of coefficients. Lasso regression, on the other hand, performs both variable selection and regularization in order to enhance the prediction accuracy and interpretability of the model. Elastic Net combines these approaches to handle situations where there are highly correlated variables. This involves finding the best set of coefficients that will minimize the difference between what we predict and what we actually observe. We have a few tools at our disposal to achieve this, like gradient descent. The ultimate goal is to identify the polynomial that best fits the given data points. And how do we decide the degree of this polynomial? Well, that's a bit of a balancing act between accuracy and complexity, we want a model that's accurate while ensuring it doesn't become overly complex to manage.
 
 The purpose of this part of the project is to investigate Halofit emulation, placing a particular emphasis on a few critical questions around COLA emulation: Firstly, what is the minimum number of data points needed to limit the emulation error to less than one percent? Secondly, is there a necessity to include Baryon Acoustic Oscillations (BAO) smearing in the process? If so, what would be the optimal technique to implement BAO smearing?
+
+
+# Installation
+...
+
+## Packages 
+testing
+
+# Usage
+...
 
 
 
