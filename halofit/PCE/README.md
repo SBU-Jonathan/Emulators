@@ -42,20 +42,21 @@ To run the training notebook you will need to have the following packages instal
 
 To install chaospy and numpoly use:
 
-
-<pre>
-pip install numpoly
-</pre>
-<pre>
-pip install chaospy
-</pre>
-
-
- 
+    pip install numpoly && pip install chaospy
 
 **DO NOT USE ''CONDA INSTALL''** \-> both packages will be installed incorrectly using the conda install command due to a dependency mismatch.
 
+To install scikit-learn follow [this](https://scikit-learn.org/stable/install.html).
 
+To install euclidemu2 follow [this](https://github.com/miknab/EuclidEmulator2).
+
+To install scipy follow [this](https://scipy.org/install/).
+
+To install numpy follow [this]( https://numpy.org/install/).
+
+To install tqdm follow [this]( https://github.com/tqdm/tqdm#installation).
+
+regfortran___2 
 
 
 # Usage
