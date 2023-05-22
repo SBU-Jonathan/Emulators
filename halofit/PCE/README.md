@@ -3,8 +3,8 @@
  
 2. [Installation](#installation)   
    1. [Packages](#usage-subsection-1)
-4. [Usage](#usage)
-5. [License](#license)
+3. [Usage](#usage)
+
 
 
  
@@ -27,8 +27,8 @@ The purpose of this part of the project is to investigate Halofit emulation, pla
 # Installation
 ...
 
-## Packages 
-testing
+# Packages 
+...
 
 # Usage
 ...
