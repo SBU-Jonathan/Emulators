@@ -28,7 +28,35 @@ The purpose of this part of the project is to investigate Halofit emulation, pla
 ...
 
 # Packages 
-...
+
+To run the training notebook you will need to have the following packages installed:
+
+- chaospy
+- numpoly
+- scikit-learn
+- euclidemu2
+- regfortran___2  
+- scipy
+- numpy
+- tqdm
+
+To install chaospy and numpoly use:
+
+
+<pre>
+pip install numpoly
+</pre>
+<pre>
+pip install chaospy
+</pre>
+
+
+ 
+
+**DO NOT USE ''CONDA INSTALL''** \-> both packages will be installed incorrectly using the conda install command due to a dependency mismatch.
+
+
+
 
 # Usage
 ...
