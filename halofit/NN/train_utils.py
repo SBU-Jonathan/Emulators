@@ -9,9 +9,11 @@ from scipy.fftpack import dst, idst
 from scipy.integrate import simps
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras import layers
+from tensorflow.keras import models, layers, optimizers
 from keras.regularizers import l1_l2
+from keras.callbacks import Callback
 #------------------------------------------------------------------------------------------------------------
 # Parameter space
 params = ['h', 'Omegab', 'Omegam', 'As', 'ns', 'w']
@@ -105,7 +107,7 @@ def normalize_params(params):
     Normalization is given by normalized_param = (param - param_min)(param_max - param_min).
     '''
     if len(params) == 6:
-        h, Omegab, Omegam, As10to9, ns, wde = params
+        Omegam, Omegab, ns, As10to9, h, wde = params
         normalized_params = [(h-lims['h'][0])/(lims['h'][1] - lims['h'][0]),
                              (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
                              (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
@@ -175,17 +177,6 @@ def pca_reconstruction_analysis(num_pcs, norm_qs, qs, sample, save=False, imgNam
         plt.savefig(imgName)
     plt.show()
 #------------------------------------------------------------------------------------------------------------
-def emulate_boost(emulator, params, pcas, pc_components, log_boosts):
-    '''
-    Emulates the boosts using the NN model `emulator` for a set of params
-    '''
-    norm_params = normalize_params(params)
-    emulated_norm_pcs = emulator(np.array([norm_params]))
-    emulated_pcs = unnormalize_array(emulated_norm_pcs, pc_components)
-    emulated_norm_log_boost = pcas[0].inverse_transform(emulated_pcs)
-    emulated_log_boost = unnormalize_array(emulated_norm_log_boost, log_boosts)
-    emulated_boost = np.exp(emulated_log_boost)
-    return emulated_boost
 #------------------------------------------------------------------------------------------------------------
 def find_first_minimum(array):
     for i, entry in enumerate(array):
@@ -291,30 +282,85 @@ def smear_bao(ks, pk, pk_nw):
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-def generate_mlp(input_shape, output_shape, num_layers=2, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
+class TqdmProgressCallback(Callback):
+    def on_train_begin(self, logs=None):
+        self.pbar = tqdm(total=self.params['epochs'], dynamic_ncols=True)
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.pbar.set_postfix({'loss': logs.get('loss', 'N/A'),
+                               'val_loss': logs.get('val_loss', 'N/A')})
+        self.pbar.update(1)
+
+    def on_train_end(self, logs=None):
+        self.pbar.close()
+
+class CustomActivationLayer(layers.Layer):
+    def __init__(self, units, **kwargs):
+        super(CustomActivationLayer, self).__init__(**kwargs)
+        self.units = units
+
+    def build(self, input_shape):
+        # Create a trainable weight variable for this layer.
+        self.beta = self.add_weight(shape=(self.units,), initializer='random_normal', trainable=True, name="beta")
+        self.gamma = self.add_weight(shape=(self.units,), initializer='random_normal', trainable=True, name="gamma")
+        super(CustomActivationLayer, self).build(input_shape)
+
+    def call(self, x):
+        # See e.g. https://arxiv.org/pdf/1911.11778.pdf, Equation (8)
+        func = tf.add(self.gamma, tf.multiply(tf.sigmoid(tf.multiply(self.beta, x)), tf.subtract(1.0, self.gamma)))
+        return tf.multiply(func, x)
+
+    def compute_output_shape(self, input_shape):
+        return (input_shape[0], self.units)
+
+def save_model(model, file_path):
+    model.save(file_path)
+    
+def generate_mlp(input_shape, output_shape, num_layers, num_neurons, activation="custom", alpha=0.01, l1_ratio=0.01, learning_rate=1e-3, optimizer='adam', loss='mse'):
     '''
-    Returns a keras sequential NN model with `num_layers` hidden layers with `num_of_neurons` each.
+    Generates an MLP model with `num_res_blocks` residual blocks.
     '''
-    nn_layers = []
-    regularization_term = l1_l2(l1=alpha*l1_ratio, l2=alpha*(1-l1_ratio))
-    # Adding layers
-    input_layer = layers.Input(shape=input_shape)
-    nn_layers.append(input_layer)
-    for i in range(num_layers):
-        nn_layers.append(layers.Dense(num_of_neurons, activation=activation, name=f'hid_layer_{i+1}', 
-            kernel_regularizer=regularization_term, bias_regularizer=regularization_term))
-        if dropout != 0:
-            nn_layers.append(layers.Dropout(dropout, name=f'dropout_{i+1}'))
-        #nn_layers.append(layers.BatchNormalization())
-    # Output layer has `output_shape` neurons
-    out_layer = layers.Dense(output_shape, activation=activation, name='out_layer')
-    nn_layers.append(out_layer)
-    model = keras.Sequential(nn_layers)
+    reg = l1_l2(l1=alpha*l1_ratio, l2=alpha*(1-l1_ratio)) if alpha != 0 else None
+    
+    # Define the input layer
+    inputs = layers.Input(shape=(input_shape,))
+    
+    # Define the first hidden layer separately because it needs to connect with the input layer
+    x = layers.Dense(num_neurons, kernel_regularizer=reg)(inputs)
+    if activation == "custom":
+        x = CustomActivationLayer(num_neurons)(x)
+    elif activation == "relu":
+        x = keras.activations.relu(x)
+    else:
+        raise Exception(f"Unexpected activation {activation}")
+    
+    # Add more hidden layers
+    for _ in range(num_layers - 1): # subtract 1 because we've already added the first hidden layer
+        x = layers.Dense(num_neurons, kernel_regularizer=reg)(x)
+        if activation == "custom":
+            x = CustomActivationLayer(num_neurons)(x)
+        elif activation == "relu":
+            x = keras.activations.relu(x)
+        else:
+            raise Exception(f"Unexpected activation {activation}")
+
+    # Define the output layer
+    outputs = layers.Dense(output_shape)(x)
+    
+    # Choose the optimizer
+    if optimizer.lower() == 'adam':
+        opt = optimizers.Adam(learning_rate=learning_rate)
+    elif optimizer.lower() == 'sgd':
+        opt = optimizers.SGD(learning_rate=learning_rate, momentum=0.99, nesterov=True)
+    else:
+        raise ValueError(f"Unhandled optimizer: {optimizer}")
+
+    # Construct and compile the model
+    model = models.Model(inputs=inputs, outputs=outputs)
     model.summary()
-    model.compile(
-        optimizer = keras.optimizers.Adam(),
-        loss = keras.losses.MeanAbsoluteError()
-    )
+    # Compile the model
+    model.compile(optimizer=opt, loss=loss)   # or any other suitable loss function
+
     return model
 #------------------------------------------------------------------------------------------------------------
 def generate_resnet(input_shape, output_shape, num_res_blocks=1, num_of_neurons=512, activation="relu", alpha=1e-5, l1_ratio=0.1, dropout=0.1):
@@ -329,32 +375,29 @@ def generate_resnet(input_shape, output_shape, num_res_blocks=1, num_of_neurons=
     
     # Adding first residual block
     hid1 = layers.Dense(units=num_of_neurons,
-         activation='relu',
          kernel_regularizer=regularization_term,
          bias_regularizer=regularization_term)(input_layer)
-
-    hid2 = layers.Dense(units=num_of_neurons,
-         activation='relu',
-         kernel_regularizer=regularization_term,
-         bias_regularizer=regularization_term)(hid1)
+    act1 = CustomActivationLayer(num_of_neurons)(hid1)
     
-    residual = layers.Add()([hid1, hid2])
+    hid2 = layers.Dense(units=num_of_neurons,
+         kernel_regularizer=regularization_term,
+         bias_regularizer=regularization_term)(act1)
+    act2 = CustomActivationLayer(num_of_neurons)(hid2)
+    residual = layers.Add()([act1, act2])
     
     if num_res_blocks > 1:
         for i in range(num_res_blocks - 1):
             hid1 = layers.Dense(units=num_of_neurons,
-                 activation='relu',
                  kernel_regularizer=regularization_term,
                  bias_regularizer=regularization_term)(residual)
-
+            act1 = CustomActivationLayer(num_of_neurons)(hid1)
             hid2 = layers.Dense(units=num_of_neurons,
-                 activation='relu',
                  kernel_regularizer=regularization_term,
-                 bias_regularizer=regularization_term)(hid1)
-
-            residual = layers.Add()([hid1, hid2])
+                 bias_regularizer=regularization_term)(act1)
+            act2 = CustomActivationLayer(num_of_neurons)(hid2)
+            residual = layers.Add()([act1, act2])
     
-    output_layer = layers.Dense(units=output_shape, activation='relu')(residual)
+    output_layer = layers.Dense(units=output_shape)(residual)
     
     model = keras.models.Model(inputs=input_layer, outputs=output_layer)
     
@@ -596,4 +639,3 @@ def _smeared_bao_pk(k_lin=None, pk_lin=None, k_emu=None, pk_lin_emu=None, pk_nw=
         if pk_nw is None:
             pk_nw = np.array([_nowiggles_pk(k_lin=k_lin, pk_lin=pkl, k_emu=k_emu) for pkl in pk_lin])
     return pk_lin_emu * G + pk_nw * (1 - G)
-
