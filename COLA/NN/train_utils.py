@@ -54,16 +54,24 @@ def get_pk(h, Omegab, Omegam, As10to9, ns, w, redshifts = np.linspace(3, 0, 101)
     '''
     Omegac = Omegam - Omegab
     As = As10to9 * 10**-9
-    cosmology = camb.set_params(# Background
-                                H0 = 100*h, ombh2=Omegab*h**2, omch2=Omegac*h**2,
-                                TCMB = 2.7255,
-                                # Dark Energy
-                                dark_energy_model='fluid', w = w,
-                                # Neutrinos
-                                nnu=3.046, mnu = 0.058,
-                                # Initial Power Spectrum
-                                As = As, ns = ns, tau = tau,
-                                YHe = 0.246, WantTransfer=True)
+    cosmology = camb.set_params(
+        # Background
+        H0 = 100*h,
+        ombh2=Omegab*h**2,
+        omch2=Omegac*h**2,
+        TCMB = 2.7255,
+        # Dark Energy
+        dark_energy_model='fluid', w = w,
+        # Neutrinos
+        nnu=3.046,
+        mnu = 0.058,
+        # Initial Power Spectrum
+        As = As,
+        ns = ns,
+        tau = tau,
+        YHe = 0.246,
+        WantTransfer=True
+    )
     cosmology.set_matter_power(redshifts=redshifts, kmax=100.0)
     cosmology.NonLinear = model.NonLinear_none
     results = camb.get_results(cosmology)
@@ -98,21 +106,23 @@ def normalize_params(params):
     '''
     if len(params) == 6:
         Omegam, Omegab, ns, As10to9, h, wde = params
-        normalized_params = [(h-lims['h'][0])/(lims['h'][1] - lims['h'][0]),
-                             (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
-                             (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
-                             (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]),
-                             (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
-                             (wde-lims['w'][0])/(lims['w'][1] - lims['w'][0])]
+        normalized_params = [
+            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0]),
+            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
+            (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
+            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]),
+            (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
+            (wde-lims['w'][0])/(lims['w'][1] - lims['w'][0])
+        ]
     if len(params) == 5:
         Omegam, Omegab, ns, As10to9, h = params
         normalized_params = [
-                            (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
-                            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
-                            (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
-                            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]), 
-                            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0])
-                            ]
+            (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
+            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
+            (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
+            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]), 
+            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0])
+        ]
 
     normalized_params = np.array(normalized_params)
     return normalized_params
