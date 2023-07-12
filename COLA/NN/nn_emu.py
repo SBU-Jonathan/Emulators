@@ -1,10 +1,12 @@
 # NN COLA Emulator
+import os
 import numpy as np
 import keras
 import train_utils as utils
 
-cola_redshifts = np.loadtxt("data/cola_zs.txt")
-cola_ks_default = np.loadtxt("data/cola_ks_default.txt")
+path_to_emulator =  os.path.dirname(__file__)
+cola_redshifts = np.loadtxt(f"{path_to_emulator}/data/cola_zs.txt")
+cola_ks_default = np.loadtxt(f"{path_to_emulator}/data/cola_ks_default.txt")
 cola_ks_high = None
 
 def load_lcdm_def_models():
@@ -13,7 +15,7 @@ def load_lcdm_def_models():
     """
     nn_models = []
     for i, z in enumerate(cola_redshifts):
-        nn_models.append(keras.models.load_model(f"./models/LCDM/NN_Z{z:.3f}"))
+        nn_models.append(keras.models.load_model(f"{path_to_emulator}/models/LCDM/NN_Z{z:.3f}"))
     return nn_models
 
 def load_wcdm_models():
@@ -22,7 +24,7 @@ def load_wcdm_models():
     """
     nn_models = []
     for i, z in enumerate(cola_redshifts):
-        nn_models.append(keras.models.load_model(f"./models/wCDM/NN_Z{z:.3f}"))
+        nn_models.append(keras.models.load_model(f"{path_to_emulator}/models/wCDM/NN_Z{z:.3f}"))
     return nn_models
 
 def load_pcas():
@@ -35,19 +37,19 @@ def load_pcas():
     pcs = np.zeros((len(cola_redshifts), 11, len(cola_ks_default)))
     for i, z in enumerate(cola_redshifts):
         if z < 2:
-            avgs[i] = np.loadtxt(f"data/averages/avg_{i}.txt")
-            pcs[i] = np.loadtxt(f"data/pc_basis/pcs_{i}.txt")
+            avgs[i] = np.loadtxt(f"{path_to_emulator}/data/averages/avg_{i}.txt")
+            pcs[i] = np.loadtxt(f"{path_to_emulator}/data/pc_basis/pcs_{i}.txt")
         else:
-            avgs[i,:256] = np.loadtxt(f"data/averages/avg_{i}.txt")
-            pcs[i,:,:256] = np.loadtxt(f"data/pc_basis/pcs_{i}.txt")
+            avgs[i,:256] = np.loadtxt(f"{path_to_emulator}/data/averages/avg_{i}.txt")
+            pcs[i,:,:256] = np.loadtxt(f"{path_to_emulator}/data/pc_basis/pcs_{i}.txt")
     return pcs, avgs
     
 def load_normalization_factors():
     """
     Description: returns an array of normalization factors to rescale the Qs.
     """
-    mins = np.loadtxt("./data/mins.txt")
-    maxs = np.loadtxt("./data/maxs.txt")
+    mins = np.loadtxt(f"{path_to_emulator}/data/mins.txt")
+    maxs = np.loadtxt(f"{path_to_emulator}/data/maxs.txt")
     return mins, maxs
 
 def inverse_transform(components, z_index):
