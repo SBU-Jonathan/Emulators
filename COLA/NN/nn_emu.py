@@ -2,12 +2,39 @@
 import os
 import numpy as np
 import keras
-import train_utils as utils
 
 path_to_emulator =  os.path.dirname(__file__)
 cola_redshifts = np.loadtxt(f"{path_to_emulator}/data/cola_zs.txt")
 cola_ks_default = np.loadtxt(f"{path_to_emulator}/data/cola_ks_default.txt")
 cola_ks_high = None
+
+def normalize_params(params):
+    '''
+    Takes a params = (h, Omegam, Omegab, As10to9, ns, wde) array and returns normalized parameters.
+    Normalization is given by normalized_param = (param - param_min)(param_max - param_min).
+    '''
+    if len(params) == 6:
+        Omegam, Omegab, ns, As10to9, h, wde = params
+        normalized_params = [
+            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0]),
+            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
+            (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
+            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]),
+            (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
+            (wde-lims['w'][0])/(lims['w'][1] - lims['w'][0])
+        ]
+    if len(params) == 5:
+        Omegam, Omegab, ns, As10to9, h = params
+        normalized_params = [
+            (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
+            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
+            (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
+            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]), 
+            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0])
+        ]
+
+    normalized_params = np.array(normalized_params)
+    return normalized_params
 
 def load_lcdm_def_models():
     """
@@ -76,7 +103,7 @@ def get_boost(cosmo_params, ks, zs):
     Omega_b = cosmo_params['Omb']
     ns = cosmo_params['ns']
     h = cosmo_params['h']
-    norm_params = utils.normalize_params([Omega_m, Omega_b, ns, As, h])
+    norm_params = normalize_params([Omega_m, Omega_b, ns, As, h])
     
     expqs = np.zeros((len(cola_redshifts), len(cola_ks_default)))
     
