@@ -38,7 +38,7 @@ def normalize_params(params):
 
 def load_lcdm_def_models():
     """
-    Description: returns an array of NN models for default-precision LCDM for each COLA redshift z.
+    Returns an array of NN models for default-precision LCDM for each COLA redshift z.
     """
     nn_models = []
     for i, z in enumerate(cola_redshifts):
@@ -47,7 +47,7 @@ def load_lcdm_def_models():
 
 def load_wcdm_models():
     """
-    Description: returns an array of NN models for default-precision wCDM for each COLA redshift z.
+    Returns an array of NN models for default-precision wCDM for each COLA redshift z.
     """
     nn_models = []
     for i, z in enumerate(cola_redshifts):
@@ -56,7 +56,7 @@ def load_wcdm_models():
 
 def load_pcas():
     """
-    Description: returns an array of PC basis and averages to inverse transform the NN outputs.
+    Returns an array of PC basis and averages to inverse transform the NN outputs.
     For reference, the inverse transform of a set of components {PC_i} is:
         f = avg + \sum_i PC_i * basis_i
     """
@@ -73,7 +73,7 @@ def load_pcas():
     
 def load_normalization_factors():
     """
-    Description: returns an array of normalization factors to rescale the Qs.
+    Returns an array of normalization factors to rescale the Qs.
     """
     mins = np.loadtxt(f"{path_to_emulator}/data/mins.txt")
     maxs = np.loadtxt(f"{path_to_emulator}/data/maxs.txt")
@@ -81,7 +81,7 @@ def load_normalization_factors():
 
 def inverse_transform(components, z_index):
     """
-    Description: inverse transform PCA components into normalized Qs.
+    Inverse transform PCA components into normalized Qs.
     """
     global pcs, avgs
     result = avgs[z_index]
@@ -91,7 +91,7 @@ def inverse_transform(components, z_index):
 
 def get_boost(cosmo_params, ks, zs):
     """
-    Description: returns an array of boosts at given ks and zs for the cosmology defined in cosmo_params
+    Returns an array of boosts at given ks and zs for the cosmology defined in cosmo_params
     Inputs:
         - `cosmo_params`: a dictionary of cosmological parameters. The keys to be defined are the same as EE2: `Omm`, `Omb`, `ns`, `As`, `h`, `w`.
         - `ks`: array of scales to return

@@ -43,6 +43,28 @@ path_to_train = "/home/grads/data/jonathan/cola_projects/COLA_output/LCDM/400_1"
 ks_cola_default = np.loadtxt(f"{path_to_train}/a/output/ref/pofk_ref_total_z0.000.txt", unpack=True, usecols=(0))
 ks_cola_default = ks_cola_default[:512] # Need to restrain to k = pi
 #------------------------------------------------------------------------------------------------------------
+def is_cosmo_inside_ee2_box(params):
+    """
+    Returns `True` if the cosmology is inside the EE2 box.
+    """
+    Omega_m = params[0]
+    Omega_b = params[1]
+    ns = params[2]
+    As = params[3]
+    h = params[4]
+    result = (
+        Omega_m > lims['Omegam'][0] and Omega_m < lims['Omegam'][1] and
+        Omega_b > lims['Omegab'][0] and Omega_b < lims['Omegab'][1] and
+        ns > lims['ns'][0] and ns < lims['ns'][1] and
+        As > lims['As'][0] and As < lims['As'][1] and
+        h > lims['h'][0] and h < lims['h'][1]
+    )
+    if len(params) == 6:
+        w = params[5]
+        result = result and (w > lims['w'][0] and w < lims['w'][1])
+    return result
+    
+
 def get_pk(h, Omegab, Omegam, As10to9, ns, w, redshifts = np.linspace(3, 0, 101), tau = 0.078):
     '''
     Returns [k, Pk_lin, Pk_nonlin], the scales and power spectrum for the given cosmology.
@@ -107,11 +129,11 @@ def normalize_params(params):
     if len(params) == 6:
         Omegam, Omegab, ns, As10to9, h, wde = params
         normalized_params = [
-            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0]),
-            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
             (Omegam-lims['Omegam'][0])/(lims['Omegam'][1] - lims['Omegam'][0]),
-            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]),
+            (Omegab-lims['Omegab'][0])/(lims['Omegab'][1] - lims['Omegab'][0]),
             (ns-lims['ns'][0])/(lims['ns'][1] - lims['ns'][0]),
+            (As10to9-lims['As'][0])/(lims['As'][1] - lims['As'][0]),
+            (h-lims['h'][0])/(lims['h'][1] - lims['h'][0]),
             (wde-lims['w'][0])/(lims['w'][1] - lims['w'][0])
         ]
     if len(params) == 5:
@@ -309,18 +331,6 @@ def smear_bao(ks, pk, pk_nw, par=0.5):
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
 #------------------------------------------------------------------------------------------------------------
-class TqdmProgressCallback(Callback):
-    def on_train_begin(self, logs=None):
-        self.pbar = tqdm(total=self.params['epochs'], dynamic_ncols=True)
-
-    def on_epoch_end(self, epoch, logs=None):
-        self.pbar.set_postfix({'loss': logs.get('loss', 'N/A'),
-                               'val_loss': logs.get('val_loss', 'N/A')})
-        self.pbar.update(1)
-
-    def on_train_end(self, logs=None):
-        self.pbar.close()
-
 class CustomActivationLayer(layers.Layer):
     def __init__(self, units, **kwargs):
         super(CustomActivationLayer, self).__init__(**kwargs)
